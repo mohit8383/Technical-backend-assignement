@@ -1,27 +1,36 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Index
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Index
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from .database import Base
+from datetime import datetime
+
+Base = declarative_base()
 
 class Book(Base):
     __tablename__ = "books"
     
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(255), nullable=False, index=True)
-    author = Column(String(255), nullable=False, index=True)
+    title = Column(String(255), nullable=False)
+    author = Column(String(255), nullable=False)
+    description = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationship with reviews
-    reviews = relationship("Review", back_populates="book", cascade="all, delete-orphan")
+    reviews = relationship("Review", back_populates="book")
 
 class Review(Base):
     __tablename__ = "reviews"
     
     id = Column(Integer, primary_key=True, index=True)
-    text = Column(Text, nullable=False)
-    rating = Column(Integer, nullable=True)  # Optional rating
     book_id = Column(Integer, ForeignKey("books.id"), nullable=False)
+    reviewer_name = Column(String(255), nullable=False)
+    rating = Column(Integer, nullable=False)  # 1-5 stars
+    comment = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationship with book
     book = relationship("Book", back_populates="reviews")
-
-# Create index on book_id for better query performance
-Index('idx_reviews_book_id', Review.book_id) 
+    
+    # Critical: Index for optimizing reviews by book queries
+    __table_args__ = (
+        Index('idx_reviews_book_id', 'book_id'),
+    ) 

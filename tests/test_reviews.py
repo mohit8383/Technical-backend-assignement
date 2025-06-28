@@ -212,4 +212,70 @@ class TestReviews:
         
         # Verify review is deleted
         get_response = client.get(f"/reviews/{review_id}")
-        assert get_response.status_code == 404 
+        assert get_response.status_code == 404
+
+def test_create_review(client):
+    """Unit test: Create a review for a book"""
+    # First create a book
+    book_data = {"title": "Review Test Book", "author": "Test Author"}
+    book_response = client.post("/books", json=book_data)
+    book_id = book_response.json()["id"]
+    
+    # Create a review
+    review_data = {
+        "reviewer_name": "Test Reviewer",
+        "rating": 5,
+        "comment": "Great book!"
+    }
+    
+    response = client.post(f"/books/{book_id}/reviews", json=review_data)
+    
+    assert response.status_code == 201
+    data = response.json()
+    assert data["reviewer_name"] == review_data["reviewer_name"]
+    assert data["rating"] == review_data["rating"]
+    assert data["comment"] == review_data["comment"]
+    assert data["book_id"] == book_id
+
+def test_get_book_reviews(client):
+    """Test getting reviews for a book"""
+    # Create a book
+    book_data = {"title": "Book with Reviews", "author": "Test Author"}
+    book_response = client.post("/books", json=book_data)
+    book_id = book_response.json()["id"]
+    
+    # Create multiple reviews
+    reviews = [
+        {"reviewer_name": "Reviewer 1", "rating": 5, "comment": "Excellent!"},
+        {"reviewer_name": "Reviewer 2", "rating": 4, "comment": "Good read"},
+    ]
+    
+    for review in reviews:
+        client.post(f"/books/{book_id}/reviews", json=review)
+    
+    # Get reviews
+    response = client.get(f"/books/{book_id}/reviews")
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 2
+
+def test_create_review_nonexistent_book(client):
+    """Test creating a review for a non-existent book"""
+    review_data = {
+        "reviewer_name": "Test Reviewer",
+        "rating": 5,
+        "comment": "Great book!"
+    }
+    
+    response = client.post("/books/999/reviews", json=review_data)
+    
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Book not found"
+
+def test_get_reviews_nonexistent_book(client):
+    """Test getting reviews for a non-existent book"""
+    response = client.get("/books/999/reviews")
+    
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Book not found" 
